@@ -7,7 +7,13 @@ import (
 )
 
 func main() {
-	tr := p2p.NewTCPTransport("localhost.trifacta.net:3004")
+	tcpOpts := p2p.TCPTransportOpts{
+		ListenAddr:    "localhost.trifacta.net:3004",
+		HandshakeFunc: p2p.NOPHandShakeFunc,
+		Decoder:       &p2p.NOPDecoder{},
+	}
+
+	tr := p2p.NewTCPTransport(tcpOpts)
 
 	if err := tr.ListenAndAccept(); err != nil {
 		log.Fatal(err)

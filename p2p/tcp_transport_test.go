@@ -7,10 +7,14 @@ import (
 )
 
 func TestTcpTransport(t *testing.T) {
-	listenAddrr := ":4000"
-	tr := NewTCPTransport(listenAddrr)
+	tcpOpts := TCPTransportOpts{
+		ListenAddr:    "localhost.trifacta.net:3004",
+		HandshakeFunc: NOPHandShakeFunc,
+		Decoder:       &NOPDecoder{},
+	}
+	tr := NewTCPTransport(tcpOpts)
 
-	assert.Equal(t, tr.listenAddress, listenAddrr)
+	assert.Equal(t, tcpOpts.ListenAddr, "localhost.trifacta.net:3004")
 
 	// Server
 
