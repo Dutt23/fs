@@ -2,36 +2,38 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"github.com/sd/fs/p2p"
 )
 
-func main() {
+func makeServer(listenAddr string, nodes ...string) *FileServer {
 	tcpOpts := p2p.TCPTransportOpts{
-		ListenAddr:    "localhost.trifacta.net:3000",
+		ListenAddr:    listenAddr,
 		HandshakeFunc: p2p.NOPHandShakeFunc,
 		Decoder:       &p2p.NOPDecoder{},
 		// OnPeer:        onPeer,
 	}
+
 	tcpTransport := p2p.NewTCPTransport(tcpOpts)
 
 	sOpts := FileServerOpts{
-		ListenAddr:        "localhost.trifacta.net:3000",
+		ListenAddr:        listenAddr,
 		StorageRoot:       "3000_network",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
+		BootstrapNodes:    nodes,
 	}
 
-	s := NewFileServer(sOpts)
+	return NewFileServer(sOpts)
 
+}
+
+func main() {
+	s1 := makeServer(":4000", "")
+	s2 := makeServer(":5000", ":4000")
 	go func() {
-		time.Sleep(time.Second * 3)
-		s.Stop()
+		log.Fatal(s1.Start())
 	}()
 
-	if err := s.Start(); err != nil {
-		log.Fatal(err)
-	}
-	// select {}
+	s2.Start()
 }

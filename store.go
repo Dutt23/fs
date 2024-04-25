@@ -83,10 +83,7 @@ func (s *Store) Has(key string) bool {
 
 	_, err := os.Stat(pathkey.FullPath())
 
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 func (s *Store) Delete(key string) error {
