@@ -1,35 +1,37 @@
 package main
 
 import (
-	"fmt"
 	"log"
+	"time"
 
 	"github.com/sd/fs/p2p"
 )
-
-func onPeer(peer p2p.Peer) error {
-	return nil
-}
 
 func main() {
 	tcpOpts := p2p.TCPTransportOpts{
 		ListenAddr:    "localhost.trifacta.net:3000",
 		HandshakeFunc: p2p.NOPHandShakeFunc,
 		Decoder:       &p2p.NOPDecoder{},
-		OnPeer:        onPeer,
+		// OnPeer:        onPeer,
+	}
+	tcpTransport := p2p.NewTCPTransport(tcpOpts)
+
+	sOpts := FileServerOpts{
+		ListenAddr:        "localhost.trifacta.net:3000",
+		StorageRoot:       "3000_network",
+		PathTransformFunc: CASPathTransformFunc,
+		Transport:         tcpTransport,
 	}
 
-	tr := p2p.NewTCPTransport(tcpOpts)
-
-	if err := tr.ListenAndAccept(); err != nil {
-		log.Fatal(err)
-	}
+	s := NewFileServer(sOpts)
 
 	go func() {
-		for {
-			msg := <-tr.Consume()
-			fmt.Printf("message : %+v\n", msg)
-		}
+		time.Sleep(time.Second * 3)
+		s.Stop()
 	}()
-	select {}
+
+	if err := s.Start(); err != nil {
+		log.Fatal(err)
+	}
+	// select {}
 }

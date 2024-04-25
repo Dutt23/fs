@@ -98,6 +98,9 @@ func (s *Store) Delete(key string) error {
 	return os.RemoveAll(pathkey.FirstPathName())
 }
 
+func (s *Store) Write(key string, r io.Reader) error {
+	return s.writestream(key, r)
+}
 func (s *Store) Read(key string) (io.Reader, error) {
 	f, err := s.readStream(key)
 	if err != nil {

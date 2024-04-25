@@ -9,5 +9,6 @@ type Peer interface {
 // between the nodes in the network. this can be of the form (TCP, UDP, websocket, ...)
 type Transport interface {
 	ListenAndAccept() error
-	Consume() <-chan RPC
+	Consume() <-chan *RPC
+	Close() error
 }
