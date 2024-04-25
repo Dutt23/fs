@@ -7,7 +7,9 @@ import (
 	"github.com/sd/fs/p2p"
 )
 
-func onPeer(p2p.Peer) error { return nil }
+func onPeer(peer p2p.Peer) error {
+	return nil
+}
 
 func main() {
 	tcpOpts := p2p.TCPTransportOpts{

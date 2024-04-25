@@ -98,9 +98,14 @@ func (t *TCPTransport) handleConn(conn net.Conn) {
 	// Read Loop
 	rpc := &RPC{}
 	for {
-		if err := t.Decoder.Decode(conn, rpc); err != nil {
+		err := t.Decoder.Decode(conn, rpc)
+		if err == net.ErrClosed {
+			fmt.Printf("dropping con %s\n", err)
+			return
+		}
+		if err != nil {
 			fmt.Printf("TCP Error: %s\n", err)
-			continue
+			return
 			// lenDecoderError++
 			// if lenDecoderError == 5 {
 
