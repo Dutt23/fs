@@ -19,7 +19,8 @@ type TCPTransport struct {
 
 // TCPPeer represents the remote node over a tcp established connection
 type TCPPeer struct {
-	conn     net.Conn
+	// underlying connection of the peer. Which is a tcp connection
+	net.Conn
 	outbound bool
 }
 
@@ -37,8 +38,9 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
-func (p *TCPPeer) Close() error {
-	return p.conn.Close()
+func (p *TCPPeer) Send(b []byte) error {
+	_, err := p.Conn.Write(b)
+	return err
 }
 
 // Dial implements the Transport interface.
