@@ -1,7 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"log"
+	"time"
 
 	"github.com/sd/fs/p2p"
 )
@@ -11,7 +13,6 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 		ListenAddr:    listenAddr,
 		HandshakeFunc: p2p.NOPHandShakeFunc,
 		Decoder:       &p2p.NOPDecoder{},
-		// OnPeer:        onPeer,
 	}
 
 	tcpTransport := p2p.NewTCPTransport(tcpOpts)
@@ -26,7 +27,7 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 
 	s := NewFileServer(sOpts)
 
-	tcpOpts.OnPeer = s.onPeer
+	tcpTransport.OnPeer = s.onPeer
 	return s
 
 }
@@ -37,6 +38,12 @@ func main() {
 	go func() {
 		log.Fatal(s1.Start())
 	}()
+	time.Sleep(2 * time.Second)
 
-	s2.Start()
+	go s2.Start()
+	time.Sleep(2 * time.Second)
+
+	data := bytes.NewReader([]byte("my big data file !"))
+	s2.StoreData("myprivatedata", data)
+	select {}
 }

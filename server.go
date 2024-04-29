@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"fmt"
 	"log"
@@ -31,7 +32,8 @@ type FileServer struct {
 func NewFileServer(opts FileServerOpts) *FileServer {
 	return &FileServer{
 		store: NewStore(StoreOpts{
-			Root: opts.StorageRoot,
+			Root:              opts.StorageRoot,
+			PathTransformFunc: CASPathTransformFunc,
 		}),
 		FileServerOpts: opts,
 		quitch:         make(chan struct{}),
@@ -44,19 +46,39 @@ type Payload struct {
 	Data []byte
 }
 
-func (s *FileServer) broadcast(p Payload) error {
-	peers := make([]io.Writer, len(s.peers))
+func (s *FileServer) broadcast(p *Payload) error {
+	peers := []io.Writer{}
 	for _, peer := range s.peers {
 		peers = append(peers, peer)
 	}
+
 	mw := io.MultiWriter(peers...)
+	fmt.Println(peers)
 	return gob.NewEncoder(mw).Encode(p)
 }
 
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// 1. Store file on disk
 	// 2. broadcast this file to all known peers
-	return nil
+
+	buf := new(bytes.Buffer)
+	tee := io.TeeReader(r, buf)
+
+	if err := s.Store(key, tee); err != nil {
+		return err
+	}
+
+	_, err := io.Copy(buf, r)
+	if err != nil {
+		return err
+	}
+
+	p := &Payload{
+		Key:  key,
+		Data: buf.Bytes(),
+	}
+
+	return s.broadcast(p)
 }
 
 func (s *FileServer) Stop() {
@@ -68,7 +90,7 @@ func (s *FileServer) onPeer(p p2p.Peer) error {
 	defer s.peerLock.Unlock()
 	s.peers[p.RemoteAddr().String()] = p
 
-	log.Printf("connected with remote %s", p.RemoteAddr())
+	log.Printf("connected with remote %s and peer %+v", p.RemoteAddr(), p)
 	return nil
 }
 
@@ -82,7 +104,11 @@ func (s *FileServer) loop() {
 	for {
 		select {
 		case msg := <-s.Transport.Consume():
-			fmt.Println(msg)
+			var p Payload
+			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&p); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Printf("msg recevived %+v", p)
 		case <-s.quitch:
 			return
 		}
