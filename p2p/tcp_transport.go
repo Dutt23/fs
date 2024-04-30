@@ -22,6 +22,8 @@ type TCPPeer struct {
 	// underlying connection of the peer. Which is a tcp connection
 	net.Conn
 	outbound bool
+
+	Wg *sync.WaitGroup
 }
 
 type TCPTransportOpts struct {
@@ -35,6 +37,7 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
 		conn,
 		outbound,
+		&sync.WaitGroup{},
 	}
 }
 
@@ -54,7 +57,6 @@ func (t *TCPTransport) Dial(addr string) error {
 	go t.handleConn(conn, true)
 	return nil
 }
-
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
@@ -121,7 +123,6 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		}
 	}
 
-	// lenDecoderError := 0
 	// Read Loop
 	rpc := &RPC{}
 	for {
@@ -133,14 +134,14 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		if err != nil {
 			fmt.Printf("TCP Error: %s\n", err)
 			return
-			// lenDecoderError++
-			// if lenDecoderError == 5 {
-
-			// }
 		}
 
 		rpc.From = conn.RemoteAddr()
+		peer.Wg.Add(1)
+		fmt.Println("waiting till stream is done")
 		t.rpcch <- rpc
+		peer.Wg.Wait()
+		fmt.Println("Stream done continuing")
 		// msg := buff[:n]
 	}
 }

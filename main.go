@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/gob"
 	"log"
 	"time"
 
@@ -44,6 +45,13 @@ func main() {
 	time.Sleep(2 * time.Second)
 
 	data := bytes.NewReader([]byte("my big data file !"))
-	s2.StoreData("myprivatedata", data)
+	err := s2.StoreData("myprivatedata", data)
+	if err != nil {
+		panic(err)
+	}
 	select {}
+}
+
+func init() {
+	gob.Register(MessageStoreFile{})
 }
