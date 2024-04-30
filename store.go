@@ -13,7 +13,7 @@ import (
 
 const defaultRoot = "sdnetwork"
 
-func CASPathTransformFunc(key string) PathKey {
+func CASPathTransformFunc(root, key string) PathKey {
 	hash := sha1.Sum([]byte(key))
 	hashStr := hex.EncodeToString(hash[:])
 
@@ -28,7 +28,7 @@ func CASPathTransformFunc(key string) PathKey {
 	}
 
 	return PathKey{
-		Pathname: strings.Join(paths, "/"),
+		Pathname: fmt.Sprintf("%s/%s", root, strings.Join(paths, "/")),
 		Filename: hashStr,
 	}
 }
@@ -38,7 +38,7 @@ type PathKey struct {
 	Filename string
 }
 
-type PathTransformFunc func(string) PathKey
+type PathTransformFunc func(string, string) PathKey
 
 var DefaultPathTransformFunc = func(key string) PathKey {
 	return PathKey{
@@ -79,7 +79,7 @@ func (p PathKey) FirstPathName() string {
 }
 
 func (s *Store) Has(key string) bool {
-	pathkey := s.PathTransformFunc(key)
+	pathkey := s.PathTransformFunc(s.Root, key)
 
 	_, err := os.Stat(pathkey.FullPath())
 
@@ -87,7 +87,7 @@ func (s *Store) Has(key string) bool {
 }
 
 func (s *Store) Delete(key string) error {
-	pathkey := s.PathTransformFunc(key)
+	pathkey := s.PathTransformFunc(s.Root, key)
 
 	// if err := os.RemoveAll(pathkey.FullPath()); err != nil {
 	// 	return err
@@ -95,7 +95,7 @@ func (s *Store) Delete(key string) error {
 	return os.RemoveAll(pathkey.FirstPathName())
 }
 
-func (s *Store) Write(key string, r io.Reader) error {
+func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	return s.writestream(key, r)
 }
 func (s *Store) Read(key string) (io.Reader, error) {
@@ -112,16 +112,16 @@ func (s *Store) Read(key string) (io.Reader, error) {
 }
 
 func (s *Store) readStream(key string) (io.ReadCloser, error) {
-	pathkey := s.PathTransformFunc(key)
+	pathkey := s.PathTransformFunc(s.Root, key)
 
 	return os.Open(pathkey.FullPath())
 }
 
-func (s *Store) writestream(key string, r io.Reader) error {
-	pathkey := s.PathTransformFunc(key)
+func (s *Store) writestream(key string, r io.Reader) (int64, error) {
+	pathkey := s.PathTransformFunc(s.Root, key)
 
 	if err := os.MkdirAll(pathkey.Pathname, os.ModePerm); err != nil {
-		return err
+		return 0, err
 	}
 
 	fmt.Println("Writing to file here")
@@ -129,15 +129,15 @@ func (s *Store) writestream(key string, r io.Reader) error {
 
 	f, err := os.Create(path)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Waits for end of file and blocks
 	n, err := io.Copy(f, r)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	log.Printf("written (%d) bytes to disk: %s", n, path)
-	return nil
+	return n, err
 }

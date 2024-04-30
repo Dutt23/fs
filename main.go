@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"log"
 	"time"
 
@@ -20,7 +21,7 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 
 	sOpts := FileServerOpts{
 		ListenAddr:        listenAddr,
-		StorageRoot:       "3000_network",
+		StorageRoot:       fmt.Sprintf("%s_network", listenAddr),
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
 		BootstrapNodes:    nodes,
