@@ -124,6 +124,7 @@ func (s *Store) writestream(key string, r io.Reader) error {
 		return err
 	}
 
+	fmt.Println("Writing to file here")
 	path := pathkey.FullPath()
 
 	f, err := os.Create(path)
@@ -131,6 +132,7 @@ func (s *Store) writestream(key string, r io.Reader) error {
 		return err
 	}
 
+	// Waits for end of file and blocks
 	n, err := io.Copy(f, r)
 	if err != nil {
 		return err

@@ -103,26 +103,6 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	}
 
 	return nil
-	// buf := new(bytes.Buffer)
-	// tee := io.TeeReader(r, buf)
-
-	// if err := s.Store(key, tee); err != nil {
-	// 	return err
-	// }
-
-	// _, err := io.Copy(buf, r)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// dm := &Message{
-	// 	Payload: DataMessage{
-	// 		Key:  key,
-	// 		Data: buf.Bytes(),
-	// 	},
-	// }
-
-	// return s.broadcast(dm)
 }
 
 func (s *FileServer) Stop() {
@@ -154,7 +134,7 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 		return fmt.Errorf("peer (%s) could not be found in list", from)
 	}
 
-	if err := s.store.Write(msg.Key, peer); err != nil {
+	if err := s.store.Write(msg.Key, io.LimitReader(peer, 10)); err != nil {
 		return nil
 	}
 
