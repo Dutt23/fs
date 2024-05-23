@@ -69,6 +69,7 @@ func (s *FileServer) broadcast(msg *Message) error {
 		return err
 	}
 	for _, peer := range s.peers {
+		peer.Send([]byte{p2p.IncomingMessage})
 		if err := peer.Send(buf.Bytes()); err != nil {
 			return err
 		}
@@ -130,7 +131,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		},
 	}
 
-	if s.broadcast(msg); err != nil {
+	if err := s.broadcast(msg); err != nil {
 		return err
 	}
 
@@ -138,6 +139,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 
 	// TODO: multiwriter
 	for _, peer := range s.peers {
+		peer.Send([]byte{p2p.IncomingStream})
 		n, err := io.Copy(peer, buffer)
 		if err != nil {
 			return nil

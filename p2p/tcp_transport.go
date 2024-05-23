@@ -60,7 +60,7 @@ func (t *TCPTransport) Dial(addr string) error {
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
-		rpcch:            make(chan *RPC),
+		rpcch:            make(chan *RPC, 1024),
 	}
 }
 
@@ -137,10 +137,15 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		}
 
 		rpc.From = conn.RemoteAddr()
-		peer.Wg.Add(1)
-		fmt.Println("waiting till stream is done")
+
+		if rpc.Stream {
+			peer.Wg.Add(1)
+			fmt.Printf("[%s] waiting for incoming stream to complete\n", conn.RemoteAddr())
+			peer.Wg.Wait()
+			fmt.Printf("[%s] stream closed resuming read loop\n", conn.RemoteAddr())
+			continue
+		}
 		t.rpcch <- rpc
-		peer.Wg.Wait()
 		fmt.Println("Stream done continuing")
 		// msg := buff[:n]
 	}
