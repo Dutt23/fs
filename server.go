@@ -53,12 +53,7 @@ type MessageStoreFile struct {
 	Size int64
 }
 
-type DataMessage struct {
-	Key  string
-	Data []byte
-}
-
-func (s *FileServer) broadcast(msg *Message) error {
+func (s *FileServer) stream(msg *Message) error {
 	peers := []io.Writer{}
 	for _, peer := range s.peers {
 		peers = append(peers, peer)
@@ -68,7 +63,46 @@ func (s *FileServer) broadcast(msg *Message) error {
 	return gob.NewEncoder(mw).Encode(msg)
 }
 
-func (s *FileServer) StoreData(key string, r io.Reader) error {
+func (s *FileServer) broadcast(msg *Message) error {
+	buf := new(bytes.Buffer)
+	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
+		return err
+	}
+	for _, peer := range s.peers {
+		if err := peer.Send(buf.Bytes()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type MessageGetFile struct {
+	Key string
+}
+
+func (s *FileServer) Get(key string) (io.Reader, error) {
+	if s.store.Has(key) {
+		return s.store.Read(key)
+	}
+
+	msg := &Message{
+		Payload: MessageGetFile{
+			Key: key,
+		},
+	}
+
+	fmt.Printf("don't have file (%s)locally , fetching from network ...\n", key)
+
+	if err := s.broadcast(msg); err != nil {
+		return nil, nil
+	}
+
+	select {}
+
+	return nil, nil
+}
+
+func (s *FileServer) Store(key string, r io.Reader) error {
 	// 1. Store file on disk
 	// 2. broadcast this file to all known peers
 
@@ -80,32 +114,20 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 		return nil
 	}
 
-	b := new(bytes.Buffer)
-	if err := gob.NewEncoder(b).Encode(MessageStoreFile{
-		Key: key,
-	}); err != nil {
-		return err
-	}
-
-	msg := Message{
+	msg := &Message{
 		Payload: MessageStoreFile{
 			Key:  key,
 			Size: size,
 		},
 	}
 
-	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
+	if s.broadcast(msg); err != nil {
 		return err
-	}
-	for _, peer := range s.peers {
-		if err := peer.Send(buf.Bytes()); err != nil {
-			return err
-		}
 	}
 
 	time.Sleep(time.Second * 3)
 
+	// TODO: multiwriter
 	for _, peer := range s.peers {
 		n, err := io.Copy(peer, buffer)
 		if err != nil {
@@ -135,8 +157,15 @@ func (s *FileServer) handleMessage(msg *Message) error {
 	switch v := msg.Payload.(type) {
 	case MessageStoreFile:
 		return s.handleMessageStoreFile(msg.From.String(), v)
+	case MessageGetFile:
+		return s.handleMessageGetFile(msg.From.String(), v)
 	}
 
+	return nil
+}
+
+func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error {
+	fmt.Println("need to get a file from disk and send it over the wire")
 	return nil
 }
 
@@ -214,6 +243,6 @@ func (s *FileServer) Start() error {
 	return nil
 }
 
-func (s *FileServer) Store(key string, r io.Reader) (int64, error) {
-	return s.store.Write(key, r)
-}
+// func (s *FileServer) Store(key string, r io.Reader) (int64, error) {
+// 	return s.store.Write(key, r)
+// }
