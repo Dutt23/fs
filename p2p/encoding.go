@@ -2,7 +2,6 @@ package p2p
 
 import (
 	"encoding/gob"
-	"fmt"
 	"io"
 )
 
@@ -29,7 +28,6 @@ func (dec *NOPDecoder) Decode(r io.Reader, rpc *RPC) error {
 
 	// incase of a stream we are not decoding what is being sent
 	// We are just setting stream true so we can handle that in our logic
-	fmt.Println("is stream here, ", stream)
 	if stream {
 		rpc.Stream = true
 		return nil

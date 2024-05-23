@@ -135,17 +135,15 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		return err
 	}
 
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Millisecond * 3)
 
 	// TODO: multiwriter
 	for _, peer := range s.peers {
 		peer.Send([]byte{p2p.IncomingStream})
-		n, err := io.Copy(peer, buffer)
+		_, err := io.Copy(peer, buffer)
 		if err != nil {
 			return nil
 		}
-
-		fmt.Println("received and written bytes to disk: ", n)
 	}
 
 	return nil
@@ -202,7 +200,6 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 }
 
 func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) error {
-	fmt.Printf("receievd message store file %+v \n", msg)
 	peer, ok := s.peers[from]
 	if !ok {
 		return fmt.Errorf("peer (%s) could not be found in list", from)

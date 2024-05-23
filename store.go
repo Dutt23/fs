@@ -124,7 +124,6 @@ func (s *Store) writestream(key string, r io.Reader) (int64, error) {
 		return 0, err
 	}
 
-	fmt.Println("Writing to file here")
 	path := pathkey.FullPath()
 
 	f, err := os.Create(path)

@@ -124,8 +124,8 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	}
 
 	// Read Loop
-	rpc := &RPC{}
 	for {
+		rpc := &RPC{}
 		err := t.Decoder.Decode(conn, rpc)
 		if err == net.ErrClosed {
 			fmt.Printf("dropping con %s\n", err)
