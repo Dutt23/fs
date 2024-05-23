@@ -97,6 +97,15 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 		return nil, nil
 	}
 
+	for _, peer := range s.peers {
+		filebuffer := new(bytes.Buffer)
+		n, err := io.Copy(filebuffer, peer)
+		if err != nil {
+			return nil, err
+		}
+		fmt.Println("received bytes over the network : ", n)
+		fmt.Println(filebuffer.String())
+	}
 	select {}
 
 	return nil, nil
@@ -166,6 +175,27 @@ func (s *FileServer) handleMessage(msg *Message) error {
 
 func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error {
 	fmt.Println("need to get a file from disk and send it over the wire")
+	if !s.store.Has(msg.Key) {
+		return fmt.Errorf("file (%s) does not exist on disk\n", msg.Key)
+	}
+
+	r, err := s.store.Read(msg.Key)
+	if err != nil {
+		return err
+	}
+
+	peer, ok := s.peers[from]
+	if !ok {
+		return fmt.Errorf("peer not in map")
+	}
+
+	n, err := io.Copy(peer, r)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("written %d bytes over the network to %s\n", n, from)
 	return nil
 }
 
@@ -195,17 +225,17 @@ func (s *FileServer) loop() {
 	for {
 		select {
 		case rpc := <-s.Transport.Consume():
-			fmt.Println("received msesag", rpc)
+			fmt.Println("received msesage", rpc)
 			var msg Message
 			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&msg); err != nil {
-				log.Println(err)
+				log.Println("decoding err : ", err)
 			}
 			msg.From = rpc.From
 
 			fmt.Printf("%+v\n", msg.Payload)
 
 			if err := s.handleMessage(&msg); err != nil {
-				log.Println(err)
+				log.Println("handling message error : ", err)
 			}
 
 		case <-s.quitch:
