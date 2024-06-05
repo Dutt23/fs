@@ -99,7 +99,7 @@ func (s *Store) Write(key string, r io.Reader) (int64, error) {
 }
 
 // TODO : Instead of reading into memory
-func (s *Store) Read(key string) (int64, io.ReadCloser, error) {
+func (s *Store) Read(key string) (int64, io.Reader, error) {
 	return s.readStream(key)
 }
 
