@@ -23,7 +23,7 @@ type TCPPeer struct {
 	net.Conn
 	outbound bool
 
-	Wg *sync.WaitGroup
+	wg *sync.WaitGroup
 }
 
 type TCPTransportOpts struct {
@@ -44,6 +44,11 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 func (p *TCPPeer) Send(b []byte) error {
 	_, err := p.Conn.Write(b)
 	return err
+}
+
+func (p *TCPPeer) CloseStream() error {
+	p.wg.Done()
+	return nil
 }
 
 // Dial implements the Transport interface.
@@ -127,6 +132,7 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	for {
 		rpc := &RPC{}
 		err := t.Decoder.Decode(conn, rpc)
+		fmt.Println("received message")
 		if err == net.ErrClosed {
 			fmt.Printf("dropping con %s\n", err)
 			return
@@ -139,14 +145,14 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		rpc.From = conn.RemoteAddr()
 
 		if rpc.Stream {
-			peer.Wg.Add(1)
+			peer.wg.Add(1)
 			fmt.Printf("[%s] waiting for incoming stream to complete\n", conn.RemoteAddr())
-			peer.Wg.Wait()
+			peer.wg.Wait()
 			fmt.Printf("[%s] stream closed resuming read loop\n", conn.RemoteAddr())
 			continue
 		}
 		t.rpcch <- rpc
-		fmt.Println("Stream done continuing")
+		fmt.Println("Resuming loop")
 		// msg := buff[:n]
 	}
 }
