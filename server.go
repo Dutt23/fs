@@ -189,9 +189,7 @@ func (s *FileServer) handleMessageGetFile(from string, msg MessageGetFile) error
 		return err
 	}
 
-	rc, ok := r.(io.ReadCloser)
-
-	if ok {
+	if rc, ok := r.(io.ReadCloser); ok {
 		defer rc.Close()
 	}
 
