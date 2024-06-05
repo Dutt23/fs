@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/gob"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"time"
 
@@ -45,29 +45,28 @@ func main() {
 	go s2.Start()
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 10; i++ {
-		data := bytes.NewReader([]byte(fmt.Sprintf("my big data file ! (%d)", i)))
-		s2.Store(fmt.Sprintf("myprivatedata_%d", i), data)
-		time.Sleep(5 * time.Millisecond)
-	}
+	// for i := 0; i < 1; i++ {
+	// 	data := bytes.NewReader([]byte(fmt.Sprintf("my big data file ! (%d)", i)))
+	// 	s2.Store(fmt.Sprintf("myprivatedata_%d", i), data)
+	// 	time.Sleep(5 * time.Millisecond)
+	// }
 	// data := bytes.NewReader([]byte("my big data file !"))
 	// err := s2.Store("myprivatedata", data)
 	// if err != nil {
 	// 	panic(err)
 	// }
 
-	// r, err := s2.Get("myprivatedata")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	r, err := s1.Get("myprivatedata_0")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// b, err := ioutil.ReadAll(r)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// fmt.Println(string(b))
-	select {}
+	fmt.Println(string(b))
 }
 
 func init() {

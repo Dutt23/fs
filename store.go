@@ -98,23 +98,33 @@ func (s *Store) Delete(key string) error {
 func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	return s.writestream(key, r)
 }
-func (s *Store) Read(key string) (io.Reader, error) {
-	f, err := s.readStream(key)
+
+// TODO : Instead of reading into memory
+func (s *Store) Read(key string) (int64, io.Reader, error) {
+	n, f, err := s.readStream(key)
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	defer f.Close()
 	buf := new(bytes.Buffer)
-	io.Copy(buf, f)
+	_, err = io.Copy(buf, f)
 
-	return buf, nil
+	return n, buf, err
 }
 
-func (s *Store) readStream(key string) (io.ReadCloser, error) {
+func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	pathkey := s.PathTransformFunc(s.Root, key)
+	f, err := os.Open(pathkey.FullPath())
+	if err != nil {
+		return 0, nil, err
+	}
 
-	return os.Open(pathkey.FullPath())
+	stat, err := os.Stat(pathkey.FullPath())
+	if err != nil {
+		return 0, nil, err
+	}
+	return stat.Size(), f, nil
 }
 
 func (s *Store) writestream(key string, r io.Reader) (int64, error) {
