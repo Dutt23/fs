@@ -141,20 +141,24 @@ func (s *Store) WriteDecrypt(encKey []byte, key string, src io.Reader) (int64, e
 	return int64(n), err
 }
 
-func (s *Store) writestream(key string, r io.Reader) (int64, error) {
+func (s *Store) openFileForWriting(key string) (*os.File, error) {
 	pathkey := s.PathTransformFunc(s.Root, key)
 
 	if err := os.MkdirAll(pathkey.Pathname, os.ModePerm); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	path := pathkey.FullPath()
 
-	f, err := os.Create(path)
+	return os.Create(path)
+}
+
+func (s *Store) writestream(key string, r io.Reader) (int64, error) {
+	f, err := s.openFileForWriting(key)
+
 	if err != nil {
 		return 0, err
 	}
-
 	// Waits for end of file and blocks
 	return io.Copy(f, r)
 }

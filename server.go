@@ -103,6 +103,12 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 		return nil, err
 	}
 
+	peers := []io.Writer{}
+
+	for _, peer := range s.peers {
+		peers = append(peers, peer)
+	}
+
 	for _, peer := range s.peers {
 		var fileSize int64
 		binary.Read(peer, binary.LittleEndian, &fileSize)
@@ -146,19 +152,20 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 
 	time.Sleep(time.Millisecond * 3)
 
-	// TODO: multiwriter
+	peers := []io.Writer{}
 	for _, peer := range s.peers {
-		peer.Send([]byte{p2p.IncomingStream})
-		// _, err := io.Copy(peer, buffer)
-		_, err := copyEncrypt(s.EncKey, buffer, peer)
-		if err != nil {
-			return nil
-		}
-		// _, err := io.Copy(peer, buffer)
-		// if err != nil {
-		// 	return nil
-		// }
+		peers = append(peers, peer)
 	}
+
+	mw := io.MultiWriter(peers...)
+	mw.Write([]byte{p2p.IncomingStream})
+
+	n, err := copyEncrypt(s.EncKey, buffer, mw)
+	if err != nil {
+		return nil
+	}
+
+	fmt.Printf("[%s] received and written bytes to disk (%d) \n", s.ListenAddr, n)
 
 	return nil
 }
