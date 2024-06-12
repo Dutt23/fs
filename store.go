@@ -117,6 +117,30 @@ func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	return stat.Size(), f, nil
 }
 
+func (s *Store) WriteDecrypt(encKey []byte, key string, src io.Reader) (int64, error) {
+	pathkey := s.PathTransformFunc(s.Root, key)
+
+	if err := os.MkdirAll(pathkey.Pathname, os.ModePerm); err != nil {
+		return 0, err
+	}
+
+	path := pathkey.FullPath()
+
+	f, err := os.Create(path)
+	if err != nil {
+		return 0, err
+	}
+
+	// Waits for end of file and blocks
+	n, err := copyDecrypt(encKey, src, f)
+	if err != nil {
+		return 0, err
+	}
+
+	log.Printf("written (%d) bytes to disk: %s", n, path)
+	return int64(n), err
+}
+
 func (s *Store) writestream(key string, r io.Reader) (int64, error) {
 	pathkey := s.PathTransformFunc(s.Root, key)
 
@@ -132,11 +156,5 @@ func (s *Store) writestream(key string, r io.Reader) (int64, error) {
 	}
 
 	// Waits for end of file and blocks
-	n, err := io.Copy(f, r)
-	if err != nil {
-		return 0, err
-	}
-
-	log.Printf("written (%d) bytes to disk: %s", n, path)
-	return n, err
+	return io.Copy(f, r)
 }

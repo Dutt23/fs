@@ -19,8 +19,10 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 
 	tcpTransport := p2p.NewTCPTransport(tcpOpts)
 
+	key := newEncryptionKey()
+	fmt.Printf("key (%+v) \n", key)
 	sOpts := FileServerOpts{
-		EncKey:            newEncryptionKey(),
+		EncKey:            key,
 		ListenAddr:        listenAddr,
 		StorageRoot:       fmt.Sprintf("%s_network", listenAddr),
 		PathTransformFunc: CASPathTransformFunc,
@@ -46,21 +48,26 @@ func main() {
 	go s2.Start()
 	time.Sleep(2 * time.Second)
 
-	for i := 0; i < 1; i++ {
-		data := bytes.NewReader([]byte(fmt.Sprintf("my big data file ! (%d)", i)))
-		s2.Store(fmt.Sprintf("myprivatedata_%d", i), data)
-		time.Sleep(5 * time.Millisecond)
+	// for i := 0; i < 1; i++ {
+	// 	data := bytes.NewReader([]byte(fmt.Sprintf("my big data file ! (%d)", i)))
+	// 	s2.Store(fmt.Sprintf("myprivatedata_%d", i), data)
+	// 	time.Sleep(5 * time.Millisecond)
+	// }
+	data := bytes.NewReader([]byte("my big data file !"))
+	err := s2.Store("myprivatedata", data)
+	if err != nil {
+		panic(err)
 	}
-	// data := bytes.NewReader([]byte("my big data file !"))
-	// err := s2.Store("myprivatedata", data)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
-	// r, err := s1.Get("myprivatedata_0")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	err = s2.store.Delete("myprivatedata")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	_, err = s2.Get("myprivatedata")
+	if err != nil {
+		log.Fatal("error here %+v", err)
+	}
 
 	// b, err := ioutil.ReadAll(r)
 	// if err != nil {
@@ -68,7 +75,7 @@ func main() {
 	// }
 
 	// fmt.Println(string(b))
-	// select {}
+	select {}
 }
 
 func init() {
